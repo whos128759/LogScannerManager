@@ -77,7 +77,7 @@
       .filter(Boolean);
   }
 
-  function maskCode(text) {
+  function maskCode(text, commentsOnly) {
     let out = "";
     let state = "code";
     let quote = "";
@@ -91,7 +91,7 @@
           state = "code";
           out += "\n";
         } else {
-          out += " ";
+          out += commentsOnly ? ch : " ";
         }
         continue;
       }
@@ -102,7 +102,7 @@
           i += 1;
           state = "code";
         } else {
-          out += ch === "\n" ? "\n" : " ";
+          out += ch === "\n" ? "\n" : commentsOnly ? ch : " ";
         }
         continue;
       }
@@ -142,7 +142,7 @@
         state = "string";
         quote = ch;
       } else {
-        out += ch;
+        out += commentsOnly && ch !== "\n" ? " " : ch;
       }
     }
 
@@ -475,55 +475,60 @@
   function analyzeText(text, path, options) {
     const customClasses = options && options.scanCustom === false ? [] : parseCustomClasses(options && options.customClasses);
     const masked = maskCode(text);
+    const comments = maskCode(text, true);
     const loggerObjects = parseCustomClasses(options && options.loggerObjects || "LOG,LOGGER,log,logger,mLogger");
     const importedMethods = importedAndroidLogMethods(masked);
     const starts = lineStarts(masked);
-    const maskedLines = masked.split(/\r?\n/);
     const contexts = buildLineContexts(masked);
     const seen = new Set();
     const rows = [];
 
-    for (const pattern of patterns(customClasses, loggerObjects, importedMethods)) {
-      pattern.re.lastIndex = 0;
-      let match;
-      while ((match = pattern.re.exec(masked))) {
-        if (seen.has(match.index)) continue;
+    for (const scan of [{ code: masked }, { code: comments, blocked: true }]) {
+      const maskedLines = scan.code.split(/\r?\n/);
+      for (const pattern of patterns(customClasses, loggerObjects, importedMethods)) {
+        pattern.re.lastIndex = 0;
+        let match;
+        while ((match = pattern.re.exec(scan.code))) {
+          if (seen.has(match.index)) continue;
 
-        const lineIndex = lineAt(starts, match.index);
-        const lineStart = starts[lineIndex];
-        const column = match.index - lineStart;
-        if (pattern.bare && (masked[match.index - 1] === "." || isBareMethodDeclaration(maskedLines[lineIndex] || "", column))) continue;
-        seen.add(match.index);
-        const snippet = extractSnippet(text, match.index);
-        const levelKey = String(pattern.level(match) || "").toLowerCase();
-        const status = classify(contexts[lineIndex] || {}, maskedLines[lineIndex] || "", column, snippet);
-        const lineLoop = /\b(for|while)\s*\(|\bdo\b/.test((maskedLines[lineIndex] || "").slice(0, column));
-        const candidates = [];
+          const lineIndex = lineAt(starts, match.index);
+          const lineStart = starts[lineIndex];
+          const column = match.index - lineStart;
+          if (pattern.bare && (scan.code[match.index - 1] === "." || isBareMethodDeclaration(maskedLines[lineIndex] || "", column))) continue;
+          seen.add(match.index);
+          const snippet = extractSnippet(text, match.index);
+          const levelKey = String(pattern.level(match) || "").toLowerCase();
+          const status = scan.blocked
+            ? { category: "blocked", confidence: "high", reason: "注释中的日志调用" }
+            : classify(contexts[lineIndex] || {}, maskedLines[lineIndex] || "", column, snippet);
+          const lineLoop = /\b(for|while)\s*\(|\bdo\b/.test((maskedLines[lineIndex] || "").slice(0, column));
+          const candidates = [];
 
-        if (status.category === "effective") {
-          if ((contexts[lineIndex] && contexts[lineIndex].loop) || lineLoop) candidates.push("循环日志");
-          if (/["'`]\s*\+|\+\s*["'`]|\$\w+|\$\{/.test(snippet)) candidates.push("字符串拼接/插值");
-          if (/\/src\/main\//i.test("/" + path.replace(/\\/g, "/")) && ["v", "d", "debug", "trace"].includes(levelKey)) {
-            candidates.push("主链路 Debug/Verbose");
+          if (status.category === "effective") {
+            if ((contexts[lineIndex] && contexts[lineIndex].loop) || lineLoop) candidates.push("循环日志");
+            if (/["'`]\s*\+|\+\s*["'`]|\$\w+|\$\{/.test(snippet)) candidates.push("字符串拼接/插值");
+            if (/\/src\/main\//i.test("/" + path.replace(/\\/g, "/")) && ["v", "d", "debug", "trace"].includes(levelKey)) {
+              candidates.push("主链路 Debug/Verbose");
+            }
           }
-        }
 
-        rows.push({
-          id: path + ":" + (lineIndex + 1) + ":" + match.index,
-          category: status.category,
-          confidence: status.confidence || "high",
-          level: LEVEL_NAME[levelKey] || levelKey.toUpperCase() || "LOG",
-          source: pattern.source,
-          module: inferModule(path),
-          sourceSet: inferSourceSet(path),
-          file: path,
-          line: lineIndex + 1,
-          method: match[0].replace(/\s+/g, ""),
-          reason: status.reason || "可执行日志调用",
-          snippet,
-          duplicateKey: normalizeSnippet(snippet),
-          candidates
-        });
+          rows.push({
+            id: path + ":" + (lineIndex + 1) + ":" + match.index,
+            category: status.category,
+            confidence: status.confidence || "high",
+            level: LEVEL_NAME[levelKey] || levelKey.toUpperCase() || "LOG",
+            source: pattern.source,
+            module: inferModule(path),
+            sourceSet: inferSourceSet(path),
+            file: path,
+            line: lineIndex + 1,
+            method: match[0].replace(/\s+/g, ""),
+            reason: status.reason || "可执行日志调用",
+            snippet,
+            duplicateKey: normalizeSnippet(snippet),
+            candidates
+          });
+        }
       }
     }
 
@@ -578,6 +583,7 @@
       project: $("projectName"),
       sourceCount: $("sourceCount"),
       status: $("statusText"),
+      progress: $("scanProgress"),
       baselineStatus: $("baselineStatus"),
       budgetStatus: $("budgetStatus"),
       scope: $("sourceScope"),
@@ -671,7 +677,14 @@
         const li = global.document.createElement("li");
         const label = global.document.createElement("span");
         const value = global.document.createElement("strong");
-        label.textContent = name;
+        if (target === els.fileRank) {
+          const parts = String(name).replace(/\\/g, "/").split("/");
+          label.textContent = parts.pop() || name;
+          label.dataset.path = parts.slice(-3).join("/");
+          label.title = name;
+        } else {
+          label.textContent = name;
+        }
         value.textContent = count;
         li.append(label, value);
         target.appendChild(li);
@@ -762,7 +775,7 @@
       const page = paginate(filtered, currentPage, pageSize);
       currentPage = page.page || 1;
       const shown = page.items;
-      els.resultCount.textContent = filtered.length + " 条";
+      els.resultCount.textContent = filtered.length + " / " + rows.length + " 条";
       els.pageInfo.textContent = page.pageCount
         ? "第 " + page.page + " / " + page.pageCount + " 页 · " + page.start + "-" + page.end + " / " + filtered.length + " 条"
         : "第 0 / 0 页 · 0 条";
@@ -831,8 +844,12 @@
       els.export.disabled = true;
       els.baselineFile.disabled = true;
       els.baselineExport.disabled = true;
+      els.scanCustom.disabled = true;
       els.status.textContent = "扫描中";
       els.status.title = "";
+      els.progress.max = scanFiles.length;
+      els.progress.value = 0;
+      els.progress.hidden = false;
       const options = {
         scanCustom: els.scanCustom.checked,
         customClasses: els.customClasses.value,
@@ -848,6 +865,7 @@
           failures.push(path);
         }
         if (i % 20 === 0 || i === scanFiles.length - 1) {
+          els.progress.value = i + 1;
           els.status.textContent = (i + 1) + " / " + scanFiles.length;
           await new Promise((resolve) => global.setTimeout(resolve, 0));
         }
@@ -862,8 +880,10 @@
       els.files.disabled = false;
       els.scope.disabled = false;
       els.baselineFile.disabled = false;
+      els.scanCustom.disabled = false;
       els.scan.disabled = false;
       render();
+      els.progress.hidden = true;
     }
 
     els.files.addEventListener("change", async () => {
@@ -952,7 +972,9 @@
       render();
     });
 
-    [els.scanCustom, els.customClasses, els.loggerObjects].forEach((el) => {
+    els.scanCustom.addEventListener("change", scanProject);
+
+    [els.customClasses, els.loggerObjects].forEach((el) => {
       el.addEventListener("input", () => {
         if (!files.length) return;
         els.status.textContent = "扫描规则已更改，请重新扫描";

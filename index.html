@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>日志管理V4</title>
+  <title>日志扫描管理V4.2</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
     <header class="topbar">
       <div>
         <p class="eyebrow">Android Log Counter</p>
-        <h1>日志管理V4</h1>
+        <h1>日志扫描管理V4.2</h1>
       </div>
       <div class="actions">
         <label class="file-button">
@@ -40,6 +40,7 @@
       <div>
         <span class="muted">进度</span>
         <strong id="statusText">等待选择目录</strong>
+        <progress id="scanProgress" max="1" value="0" hidden aria-label="项目扫描进度"></progress>
       </div>
       <div>
         <span class="muted">基线对比</span>
@@ -156,7 +157,7 @@
         <section class="panel result-panel">
           <div class="panel-title">
             <h2>日志明细</h2>
-            <span id="resultCount" class="muted">0 条</span>
+            <span id="resultCount" class="muted">0 / 0 条</span>
           </div>
           <div class="table-wrap">
             <table>

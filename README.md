@@ -1,12 +1,20 @@
-# Log Manager V4
+# Log Scanner Manager V4.2
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
-Log Manager V4 is a dependency-free log governance tool for Android projects. We recommend opening `LogScope-V4.html` directly from the output directory. Its CSS and JavaScript are inlined, so it can be distributed as a single file.
+Log Scanner Manager V4.2 is a dependency-free log governance tool for Android projects. We recommend opening `LogScope-V4.html` directly from the output directory. Its CSS and JavaScript are inlined, so it can be distributed as a single file.
 
 Open `index.html` and select an Android project directory. By default, the tool scans production source code under `src/main`. You can switch to all source sets (`全部源码集`) or select `main` plus a specific source set; changing the scope automatically starts a new scan. Use the `扫描源文件 / 可用` (scanned source files / available) indicator at the top to verify the current statistics scope.
 
-V4 recognizes Android Log calls, static imports and Kotlin aliases, Timber, System.out/err, Logger APIs, and custom logging classes and methods. Every detail row and CSV record includes the detection source and source set.
+V4.2 recognizes Android Log calls, static imports and Kotlin aliases, Timber, System.out/err, Logger APIs, and custom logging classes and methods. Every detail row and CSV record includes the detection source and source set.
+
+## V4.2 Release Notes (2026-08-20)
+
+- Fixed the blocked, dead-code, and suspected-dead-code count display; logging calls inside comments are now counted as blocked.
+- Added project scan progress and locked related rule controls while scanning to keep the counting scope stable.
+- Log details now show both the filtered count and the total scanned count.
+- Effective-log file rankings now show the file name and the last three path segments to distinguish duplicate names.
+- Toggling common custom logger detection now starts a new scan automatically.
 
 ## Baselines and Budgets
 

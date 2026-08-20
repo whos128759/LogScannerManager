@@ -1,12 +1,20 @@
-# 日志管理 V4
+# 日志扫描管理 V4.2
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
-日志管理 V4 是无依赖的 Android 项目日志治理工具。推荐直接打开输出目录中的 `LogScope-V4.html`；它已内联 CSS 和 JavaScript，可单文件分发。
+日志扫描管理 V4.2 是无依赖的 Android 项目日志治理工具。推荐直接打开输出目录中的 `LogScope-V4.html`；它已内联 CSS 和 JavaScript，可单文件分发。
 
 打开 `index.html` 并选择 Android 项目目录，工具默认扫描生产源码 `src/main`。可以切换“全部源码集”，或选择“main + 指定 source set”；切换后会自动重新扫描。顶部“扫描源文件 / 可用”用于核对当前统计范围。
 
-V4 支持 Android Log、静态导入与 Kotlin 别名、Timber、System.out/err、Logger API、自定义日志类和方法。每条明细及 CSV 都包含识别来源与 source set。
+V4.2 支持 Android Log、静态导入与 Kotlin 别名、Timber、System.out/err、Logger API、自定义日志类和方法。每条明细及 CSV 都包含识别来源与 source set。
+
+## V4.2 更新说明（2026-08-20）
+
+- 修复已屏蔽、死代码和疑似死代码的统计显示；注释中的日志调用现计入“已屏蔽”。
+- 增加项目扫描进度条，扫描期间锁定相关规则控件，避免统计口径中途变化。
+- 日志明细同时显示当前筛选数量和扫描总数。
+- 有效日志文件排行显示文件名及末三级路径，重名文件更易区分。
+- 切换“包含常见自定义日志类”后自动重新扫描。
 
 ## 基线与预算
 

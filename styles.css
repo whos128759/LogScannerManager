@@ -173,6 +173,13 @@ select:focus-visible,
   white-space: nowrap;
 }
 
+#scanProgress {
+  width: 100%;
+  height: 6px;
+  margin-top: 6px;
+  accent-color: var(--blue);
+}
+
 .muted {
   color: var(--muted);
   font-size: 12px;
@@ -303,6 +310,26 @@ select:focus-visible,
 .rank-list span {
   min-width: 0;
   overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#fileRank li {
+  align-items: start;
+}
+
+#fileRank span {
+  font-weight: 600;
+}
+
+#fileRank span::after {
+  content: attr(data-path);
+  display: block;
+  margin-top: 2px;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 400;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
