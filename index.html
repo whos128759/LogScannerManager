@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>日志管理V4</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Android Log Counter</p>
+        <h1>日志管理V4</h1>
+      </div>
+      <div class="actions">
+        <label class="file-button">
+          选择项目目录
+          <input id="projectFiles" type="file" webkitdirectory directory multiple>
+        </label>
+        <button id="scanBtn" type="button" disabled>重新扫描</button>
+        <button id="exportBtn" type="button" disabled>导出 CSV</button>
+        <label class="file-button baseline-button">
+          导入基线
+          <input id="baselineFile" type="file" accept="application/json,.json">
+        </label>
+        <button id="baselineExportBtn" type="button" disabled>导出基线</button>
+      </div>
+    </header>
+
+    <section class="scan-strip" aria-live="polite">
+      <div>
+        <span class="muted">项目</span>
+        <strong id="projectName">未选择</strong>
+      </div>
+      <div>
+        <span class="muted">扫描源文件 / 可用</span>
+        <strong id="sourceCount">0</strong>
+      </div>
+      <div>
+        <span class="muted">进度</span>
+        <strong id="statusText">等待选择目录</strong>
+      </div>
+      <div>
+        <span class="muted">基线对比</span>
+        <strong id="baselineStatus">未加载</strong>
+      </div>
+      <div>
+        <span class="muted">有效日志预算</span>
+        <strong id="budgetStatus">未设置</strong>
+      </div>
+    </section>
+
+    <section class="metrics" aria-label="统计概览">
+      <button class="metric is-active" data-category="all" type="button" aria-pressed="true">
+        <span>全部日志</span>
+        <strong id="metricAll">0</strong>
+      </button>
+      <button class="metric" data-category="effective" type="button" aria-pressed="false">
+        <span>有效日志</span>
+        <strong id="metricEffective">0</strong>
+      </button>
+      <button class="metric" data-category="blocked" type="button" aria-pressed="false">
+        <span>已屏蔽</span>
+        <strong id="metricBlocked">0</strong>
+      </button>
+      <button class="metric" data-category="dead" type="button" aria-pressed="false">
+        <span>死代码</span>
+        <strong id="metricDead">0</strong>
+      </button>
+      <button class="metric" data-category="suspected" type="button" aria-pressed="false">
+        <span>疑似死代码</span>
+        <strong id="metricSuspected">0</strong>
+      </button>
+    </section>
+
+    <section class="workspace">
+      <aside class="panel controls">
+        <h2>扫描规则</h2>
+        <label class="field">
+          <span>源码范围</span>
+          <select id="sourceScope">
+            <option value="main">生产源码（src/main）</option>
+            <option value="all">全部源码集</option>
+          </select>
+        </label>
+        <label class="check">
+          <input id="scanCustom" type="checkbox" checked>
+          <span>包含常见自定义日志类</span>
+        </label>
+        <label class="check">
+          <input id="hideDead" type="checkbox">
+          <span>结果中隐藏死代码</span>
+        </label>
+        <label class="check">
+          <input id="hideBlocked" type="checkbox">
+          <span>结果中隐藏已屏蔽日志</span>
+        </label>
+        <label class="check">
+          <input id="onlyNew" type="checkbox" disabled>
+          <span>仅看基线后新增日志</span>
+        </label>
+        <label class="field">
+          <span>关键词过滤</span>
+          <input id="searchInput" type="search" placeholder="模块、文件、级别、日志内容">
+        </label>
+        <label class="field">
+          <span>自定义日志类</span>
+          <input id="customClasses" type="text" value="LogUtil,LogUtils,Logger,MLog,KLog,XLog,ALog,L">
+        </label>
+        <label class="field">
+          <span>日志对象名</span>
+          <input id="loggerObjects" type="text" value="LOG,LOGGER,log,logger,mLogger">
+        </label>
+        <label class="field">
+          <span>有效日志预算</span>
+          <input id="logBudget" type="number" min="0" step="1" placeholder="不设置则不限制">
+        </label>
+      </aside>
+
+      <section class="content">
+        <div class="grid">
+          <section class="panel">
+            <div class="panel-title">
+              <h2>有效日志模块</h2>
+              <span id="moduleTotal" class="muted">0 个模块</span>
+            </div>
+            <ol id="moduleRank" class="rank-list"></ol>
+          </section>
+
+          <section class="panel">
+            <div class="panel-title">
+              <h2>有效日志文件</h2>
+              <span id="fileTotal" class="muted">0 个文件</span>
+            </div>
+            <ol id="fileRank" class="rank-list"></ol>
+          </section>
+
+          <section class="panel">
+            <div class="panel-title">
+              <h2>识别来源</h2>
+              <span id="sourceTotal" class="muted">0 种</span>
+            </div>
+            <ol id="sourceRank" class="rank-list"></ol>
+          </section>
+
+          <section class="panel">
+            <div class="panel-title">
+              <h2>优化候选</h2>
+              <span id="candidateTotal" class="muted">0 条</span>
+            </div>
+            <ol id="candidateRank" class="rank-list"></ol>
+          </section>
+        </div>
+
+        <section class="panel result-panel">
+          <div class="panel-title">
+            <h2>日志明细</h2>
+            <span id="resultCount" class="muted">0 条</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>分类</th>
+                  <th>基线变化</th>
+                  <th>级别</th>
+                  <th>识别来源</th>
+                  <th>模块 / 源码集</th>
+                  <th>位置</th>
+                  <th>日志调用</th>
+                  <th>原因</th>
+                </tr>
+              </thead>
+              <tbody id="resultRows">
+                <tr>
+                  <td colspan="8" class="empty">选择 Android 项目目录后开始扫描。</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <nav class="pagination" aria-label="日志明细分页">
+            <span id="pageInfo" class="muted">第 0 / 0 页</span>
+            <div>
+              <button id="prevPage" type="button" disabled>上一页</button>
+              <button id="nextPage" type="button" disabled>下一页</button>
+            </div>
+          </nav>
+        </section>
+      </section>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

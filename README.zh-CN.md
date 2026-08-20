@@ -1,0 +1,31 @@
+# 日志管理 V4
+
+[English](README.md) | [简体中文](README.zh-CN.md)
+
+日志管理 V4 是无依赖的 Android 项目日志治理工具。推荐直接打开输出目录中的 `LogScope-V4.html`；它已内联 CSS 和 JavaScript，可单文件分发。
+
+打开 `index.html` 并选择 Android 项目目录，工具默认扫描生产源码 `src/main`。可以切换“全部源码集”，或选择“main + 指定 source set”；切换后会自动重新扫描。顶部“扫描源文件 / 可用”用于核对当前统计范围。
+
+V4 支持 Android Log、静态导入与 Kotlin 别名、Timber、System.out/err、Logger API、自定义日志类和方法。每条明细及 CSV 都包含识别来源与 source set。
+
+## 基线与预算
+
+1. 扫描完成后点击“导出基线”。
+2. 后续扫描通过“导入基线”加载 JSON，可查看新增、已有和移除数量，并可勾选“仅看基线后新增日志”。
+3. “有效日志预算”填写非负整数；超出后页面会显示差额。
+
+基线使用文件、识别来源和日志调用对比，不使用行号，因此单纯移动代码行不会制造假新增。导入文件限制为 25 MB、250000 条日志，并验证格式。
+
+## CI 命令行
+
+需要 Node.js 18 或更高版本：
+
+```text
+node scan-cli.mjs D:\AndroidProject --scope main --format json --output log-report.json --budget 500
+```
+
+`--scope` 支持 `main`、`all`、`source:debug`；`--format` 支持 `json`、`csv`。预算超限返回退出码 `2`，参数或项目错误返回 `1`。
+
+单个文件读取失败不会中断整批扫描。日志明细固定每页 50 条，可使用上一页/下一页浏览；长日志默认折叠为 3 行，点击“展开”查看完整调用，展开内容超过 320px 时在单元格内滚动。CSV 始终导出当前筛选的全部结果，不受分页影响。
+
+分析边界：用户要求直接跳到第四阶段，因此第三阶段的 Gradle Variant 组合解析、完整 Java/Kotlin AST 和 R8 可达性分析仍未实现。source set 根据路径判断，死代码采用高置信启发式，不确定情况不会静默排除。
