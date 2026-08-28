@@ -1,14 +1,48 @@
-# Log Scanner Manager V4.2
+# Log Scanner Manager V4.5
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
-Log Scanner Manager V4.2 is a dependency-free log governance tool for Android projects. We recommend opening `LogScope-V4.html` directly from the output directory. Its CSS and JavaScript are inlined, so it can be distributed as a single file.
+Log Scanner Manager V4.5 is a dependency-free log governance tool for Android projects. We recommend opening `LogScope-V4.html` directly from the output directory. Its CSS and JavaScript are inlined, so it can be distributed as a single file.
 
 Open `index.html` and select an Android project directory. By default, the tool scans production source code under `src/main`. You can switch to all source sets (`全部源码集`) or select `main` plus a specific source set; changing the scope automatically starts a new scan. Use the `扫描源文件 / 可用` (scanned source files / available) indicator at the top to verify the current statistics scope.
 
-V4.2 recognizes Android Log calls, static imports and Kotlin aliases, Timber, System.out/err, Logger APIs, and custom logging classes and methods. Every detail row and CSV record includes the detection source and source set.
+V4.5 recognizes Android Log calls, static imports and Kotlin aliases, Timber, System.out/err, Logger APIs, and custom logging classes and methods. Every detail row and CSV record includes the detection source and source set.
 
-## V4.2 Release Notes (2026-08-20)
+Use the top navigation to switch between the source-log scanner and runtime-log analyzer. Switching pages preserves inputs and results on both pages.
+
+## Interface Screenshots
+
+### Source Log Scanning
+
+Select an Android project directory, configure the source scope and detection rules, then review category totals, module and file rankings, optimization candidates, and expandable log details. The toolbar also provides rescan, clear, AI report copy, CSV export, and baseline import/export actions.
+
+![Log Scanner Manager V4.5 source-log scanning interface](docs/images/source-log-scanner.png)
+
+### Runtime Log Analysis
+
+Select a saved log directory, enter the target package or process, and configure the high-frequency threshold, level preset, and optional keyword. The page summarizes matching PIDs and peak rates, lists high-frequency intervals, and exposes filtered print details for CSV export or AI analysis.
+
+![Log Scanner Manager V4.5 runtime-log analysis interface](docs/images/runtime-log-analysis.png)
+
+## Runtime Log Analysis
+
+Enter a target package or process name, select a directory containing `.log` or `.txt` files, and set the high-frequency threshold (100 lines/second by default). The analyzer first maps the package to PIDs from process-start or package-bearing records, then counts target-PID records per second. Consecutive seconds meeting the threshold become one high-frequency interval.
+
+Results include PID, peak lines per second, interval, peak time and file, interval count, and total PID count. Select an interval, then filter its timestamp, PID/TID, level, tag, message, and source location with a level preset or optional keyword. An empty keyword shows all rows. Both interval summaries and current print rows can be exported as CSV.
+
+The parser currently supports common Android threadtime records and equivalent records with a year. Missing package-to-PID evidence is reported as an error instead of a false zero result. This feature analyzes saved log directories; it does not capture live ADB output.
+
+## Release Notes
+
+### V4.5 (2026-08-28)
+
+- Added saved Android runtime-log analysis with package-to-PID matching, high-frequency interval aggregation, level and keyword filtering, and separate interval and print-detail CSV exports.
+- Added one-click generation of AI optimization request text for source and runtime results, with clipboard copy and Markdown download fallback.
+- Reworked source and runtime print details into collapsible log cards with escaped full content, per-entry copy, and pagination above the result list.
+- Added independent clear actions and state-preserving navigation for the source and runtime workspaces.
+- Refreshed the responsive interface with a persistent light/dark theme and keyboard, skip-navigation, and reduced-motion accessibility support.
+
+### V4.2 (2026-08-20)
 
 - Fixed the blocked, dead-code, and suspected-dead-code count display; logging calls inside comments are now counted as blocked.
 - Added project scan progress and locked related rule controls while scanning to keep the counting scope stable.
